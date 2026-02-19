@@ -1,0 +1,192 @@
+---
+title: "E-commerce Funnel & Conversion Analysis (500K+ User Interactions)"
+author: "Ryan Leem"
+date: "2026-02-02"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggrepel)
+library(scales)
+library(ggplot2)
+
+df <- read_csv("2020-Jan.csv")
+
+glimpse(df)
+colnames(df)
+table(df$event_type)
+table(df$brand)
+
+df_clean <- df |>
+  filter(!is.na(brand), brand != "")
+
+# check: should be all FALSE
+table(is.na(df_clean$brand))
+
+# event distribution
+df_clean |> count(event_type, sort = TRUE)
+
+#It summarizes user actions (views, carts, purchases) and calculates what percent of all actions each type represents.
+funnel <- df_clean |>
+  count(event_type) |>
+  mutate(percentage = n / sum(n))
+  
+funnel
+```
+
+## Data Description
+
+This analysis uses the `2020-Jan.csv` dataset, which contains user interaction data from an online cosmetics e-commerce platform. The dataset captures user behavior during January 2020, including actions such as viewing, purchasing, adding to cart, and removing from cart for individual cosmetic items.
+
+The primary variables used in this analysis are `event_type`, which records the type of user action (e.g., product view or purchase), and `brand`, which in this dataset represents the cosmetic item associated with each interaction. These variables were aggregated to analyze item-level attention and conversion performance.
+
+To ensure meaningful comparisons, records with missing cosmetic item names were removed. Conversion rates were calculated by dividing purchases by view for each cosmetic item, and low-traffic items were filtered out when necessary to avoid misleadingly high conversion rates due to small sample sizes. 
+
+
+\newpage
+**Figure 1** below shows the total number of Views, Purchases, Items Removed from Cart. 
+
+Shows each event type (Views, Purchase, Remove from Cart, Add to Cart)
+```{r echo=FALSE, fig.align="center"}
+ggplot(funnel, aes(x = event_type, y = n)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "E-commerce Funnel",
+    x = "
+    Event Type",
+    y = "Count"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r, include=FALSE}
+#Finds the conversion rate which is views/purchases or what percentage of people actually buy the product after viewing it. Sorts the cosmetic items from highest conversion rate to the lowest conversion rate.
+brand_funnel <- df_clean |>
+  filter(event_type %in% c("view", "purchase")) |>
+  group_by(brand, event_type) |>
+  summarise(n = n(), .groups = "drop") |>
+  pivot_wider(names_from = event_type, values_from = n, values_fill = 0) |>
+  mutate(conversion_rate = purchase / view)
+
+head(brand_funnel, 10)
+```
+
+```{r, include=FALSE}
+brand_funnel_filtered <- brand_funnel |>
+  filter(view >= 10000) |>
+  arrange(desc(conversion_rate))
+
+head(brand_funnel_filtered, 10)
+```
+\newpage
+**Figure 2** shows the top 10 cosmetic items by conversion rate ordered from the highest to lowest. The conversion rate is calculated as the number of purchases divided by the number of views for each cosmetic item. Only cosmetic items with at least 10,000 views were included to avoid misleadingly high conversion rates driven by very small sample sizes.
+
+```{r, echo=FALSE, fig.align="center"}
+ggplot(head(brand_funnel_filtered, 10),
+       aes(x = reorder(brand, conversion_rate), y = conversion_rate)) +
+  geom_col(fill = "navy") +
+  coord_flip() +
+  scale_y_continuous(labels = percent) +
+  labs(
+    title = "Top 10 Cosmetic Items by Conversion Rate (Views >= 10K)",
+    x = "Cosmetic Item",
+    y = "Conversion Rate"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+\newpage
+**Figure 3** shows the conversion rate of cosmetic items with at least 25,000 views. The top being the highest views and the bottom being the lowest amount of views. Their *conversion rates* are shown as well. 
+
+```{r, echo=FALSE, fig.align="center"}
+brand_funnel_25k <- brand_funnel |>
+  filter(view >= 25000) |>
+  filter(!is.na(brand), brand != "") |>
+  arrange(desc(view))
+
+ggplot(brand_funnel_25k,
+       aes(x = reorder(brand, view), y = view)) +
+  geom_col(fill = "dodgerblue4") +
+  geom_text(
+    aes(label = paste0(
+      label_number(scale = 1e-3, suffix = "K")(view),
+      " views\nPurchase Rate: ",
+      percent(conversion_rate, accuracy = 0.1)
+    )),
+    hjust = -0.05,
+    size = 3
+  ) +
+  coord_flip(clip = "off") +
+  scale_y_continuous(
+    labels = label_number(scale = 1e-3, suffix = "K"),
+    expand = expansion(mult = c(0, 0.35))
+  ) +
+  labs(
+    title = "Cosmetic Items with the Highest Number of Views (>= 25K)",
+    x = "Cosmetic Item",
+    y = "Views"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+\newpage
+**Figure 4** shows cosmetic items with at least 20,000 views and shows their views and percent conversion rate. The smooth trend line summarizes the overall relationship between views and conversion rate.
+
+```{r, echo=FALSE, fig.align="center",message=FALSE }
+ggplot(
+  brand_funnel |> filter(view >= 20000),
+  aes(x = view, y = conversion_rate)
+) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(
+    method = "loess",
+    se = FALSE,
+    color = "gray40"
+  ) +
+  geom_text_repel(
+    aes(label = brand),
+    size = 3,
+    max.overlaps = 20
+  ) +
+  scale_x_log10(labels = label_number(scale = 1e-3, suffix = "K")) +
+  scale_y_continuous(labels = label_percent(accuracy = 0.1)) +
+  labs(
+    title = "User Attention vs Conversion (Views >= 20K)",
+    x = "Views",
+    y = "Conversion Rate"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+model <- lm(conversion_rate ~ log(view), data = brand_funnel |> filter(view >= 20000))
+summary(model)
+```
+
+**Statistical Insight**
+To test whether product visibility actually drives purchasing behavior, I ran a simple linear regression using log-transformed views to predict conversion rate for items with at least 20,000 views.
+
+The model produced an R² of 0.0845, meaning that only about 8.5% of the variation in conversion rate can be explained by differences in view count. In addition, the relationship was not statistically significant (p = 0.335).
+
+In other words, having more views does not reliably translate into a higher conversion rate.
+
+This supports the earlier visual findings: traffic alone isn’t enough. Other factors — such as pricing, product appeal, or checkout friction, likely play a much larger role in determining whether a customer completes a purchase.
+
+\newpage 
+**Findings**
+The results suggest that product visibility and purchasing efficiency are not strongly aligned. While Runail receives the highest number of views, it does not generate the strongest conversion performance. In contrast, brands such as Milv convert a higher percentage of viewers despite attracting less traffic.
+
+The funnel breakdown highlights substantial user drop-off before purchase. Although many users add products to their cart, a noticeable portion remove them rather than completing checkout. This suggests friction in the final stages of the buyer journey.
+
+Taken together, the analysis indicates that increasing exposure alone may not significantly improve sales. Improving product positioning, pricing clarity, and checkout experience may have a greater impact on conversion performance.
+
+**Future Work**
+
+Future analysis could incorporate pricing data, product category segmentation, or user-level purchase history to better understand the drivers of conversion behavior.
+
+
