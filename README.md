@@ -1,42 +1,74 @@
-E-commerce Funnel & Conversion Analysis
-Overview
+# E-commerce Funnel & Conversion Analysis
 
-This project analyzes 500,000+ e-commerce user interactions from an online cosmetics dataset to examine customer behavior across the purchasing funnel and evaluate differences in conversion performance across brands.
+## Overview
+
+This project analyzes **500,000+ e-commerce user interactions** from an online cosmetics dataset to examine customer behavior and evaluate differences in conversion performance across brands.
 
 The analysis focuses on two main questions:
 
-Where does customer activity decline throughout the purchasing process?
-Does higher product visibility correspond to higher conversion rates?
-Analysis
+* How does customer activity differ across views, cart actions, and purchases?
+* Does higher brand visibility correspond to higher conversion rates?
 
-Using R and tidyverse, I cleaned and aggregated behavioral event data including product views, cart additions, cart removals, and purchases.
+## Methods
+
+Using **R and tidyverse**, I cleaned and aggregated behavioral event data including product views, cart additions, cart removals, and purchases.
 
 I then:
 
-Analyzed the distribution of user activity across funnel stages
-Calculated brand-level purchase conversion rates
-Compared conversion performance among high-traffic brands
-Visualized the relationship between traffic volume and conversion
-Used linear regression to test whether higher view counts predict higher conversion rates
+* Analyzed the distribution of customer activity across event types
+* Calculated brand-level conversion rates
+* Compared conversion performance among high-traffic brands
+* Visualized the relationship between traffic volume and conversion rate
+* Used linear regression to test whether higher view counts predict stronger conversion
 
-To reduce misleading conversion estimates from low-traffic brands, conversion comparisons were restricted to brands exceeding minimum view thresholds.
+To reduce misleading conversion estimates from low-traffic brands, some comparisons were restricted to brands exceeding minimum view thresholds.
 
-Key Findings
-Higher visibility did not reliably translate into higher conversion.
-A regression of conversion rate against log-transformed views produced R² = 0.0845, meaning view volume explained only about 8.5% of the variation in conversion rates.
-The relationship was not statistically significant (p = 0.335).
-Some lower-traffic brands achieved stronger conversion performance than brands receiving substantially more views.
-Event counts showed substantially fewer purchases than views and cart interactions, indicating an opportunity for deeper funnel analysis around the final stages of the purchasing process.
-Technologies
+## Results
 
-R · tidyverse · ggplot2 · ggrepel · scales · Linear Regression
+### 1. Customer Activity Overview
 
-Methods
-Data cleaning and filtering
-Exploratory data analysis
-Funnel analysis
-Data aggregation
-Conversion-rate analysis
-Data visualization
-Log transformation
-Linear regression
+![E-commerce Funnel](figures/ecommerce_funnel.png)
+
+Views were the most frequent event in the dataset, while purchase events occurred much less frequently than views and cart-related interactions.
+
+### 2. Highest-Converting Brands
+
+![Top Brands by Conversion Rate](figures/top_brand_conversion.png)
+
+Among brands with at least **10,000 views**, conversion rates varied substantially. **Milv** had the highest conversion rate among the brands meeting the minimum traffic threshold.
+
+### 3. Traffic vs. Conversion Rate
+
+![Views vs Conversion Rate](figures/views_vs_conversion.png)
+
+Higher traffic did not reliably correspond to stronger conversion performance.
+
+A linear regression using log-transformed views produced:
+
+* **R² = 0.0845**
+* **p = 0.335**
+
+View volume explained only about **8.5% of the variation in conversion rates**, and the relationship was not statistically significant.
+
+## Key Findings
+
+* Higher brand visibility did not reliably translate into higher conversion
+* Conversion performance varied substantially across brands with similar levels of traffic
+* View volume explained only a small portion of the variation in conversion rates
+* The relationship between traffic volume and conversion rate was not statistically significant
+* Purchase events occurred much less frequently than earlier-stage interactions
+
+## Technologies
+
+**R** • **tidyverse** • **ggplot2** • **ggrepel** • **scales** • **Linear Regression**
+
+## Future Work
+
+Future iterations of this project could include:
+
+* Building a user- or session-level conversion funnel
+* Measuring view → cart → purchase conversion rates
+* Incorporating product pricing and category information
+* Examining individual products in addition to brand-level performance
+* Investigating user-level purchasing behavior
+* Testing additional statistical models for conversion performance
